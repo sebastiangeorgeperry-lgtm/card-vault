@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1F2E5A">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Vault Scanner — Card Vault Appraisal Tool</title>
+<style>
+  :root{
+    --navy:#1F2E5A;--navy-deep:#16213E;--slate:#5B7A99;
+    --bg:#F4F6FB;--card-bg:#FFFFFF;--line:#D8DFEC;
+    --text:#1A2440;--muted:#5B7A99;--green:#2E9E6F;--red:#D65454;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Trebuchet MS','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;padding-bottom:60px}
+  header{background:#fff;padding:16px 20px;border-bottom:3px solid var(--navy);position:sticky;top:0;z-index:50;box-shadow:0 4px 14px rgba(22,33,62,.12)}
+  .header-inner{max-width:720px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .wordmark{display:inline-flex;align-items:stretch;gap:1px;text-align:left}
+  .wm-card{writing-mode:vertical-rl;transform:rotate(180deg);font-family:'Anton',Impact,'Arial Narrow',sans-serif;color:var(--slate);line-height:.9;letter-spacing:1px;align-self:flex-start;font-size:13px}
+  .wm-right{display:flex;flex-direction:column}
+  .wm-vault{font-family:'Anton',Impact,'Arial Narrow',sans-serif;color:var(--navy);line-height:.92;letter-spacing:3px;font-size:32px}
+  .wm-tag2{font-size:11px;color:var(--muted);font-style:italic;margin-top:4px}
+  .scanner-badge{font-family:'Permanent Marker',cursive;color:#111;font-size:15px;text-transform:uppercase}
+  main{max-width:720px;margin:0 auto;padding:18px 16px}
+  .panel{background:var(--card-bg);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px;box-shadow:0 4px 14px rgba(22,33,62,.06)}
+  .panel h2{font-size:17px;margin-bottom:12px;color:var(--navy)}
+  label{display:block;font-size:12px;font-weight:bold;color:var(--muted);margin:12px 0 4px;text-transform:uppercase;letter-spacing:.5px}
+  input[type=text],input[type=number],select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;font-size:15px;background:#fff;color:var(--text);outline:none;font-family:inherit}
+  input:focus,select:focus{border-color:var(--slate)}
+  .photo-zone{border:2px dashed var(--line);border-radius:12px;min-height:150px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;cursor:pointer;color:var(--muted);font-size:14px;font-weight:bold;overflow:hidden;position:relative;text-align:center;padding:10px}
+  .photo-zone:hover{border-color:var(--slate)}
+  .photo-zone img{max-width:100%;max-height:260px;border-radius:8px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>div{flex:1;min-width:130px}
+  .lookup-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .lookup-btn{flex:1;min-width:140px;background:#fff;border:1px solid var(--navy);color:var(--navy);padding:10px;border-radius:8px;font-weight:bold;font-size:13px;cursor:pointer;text-align:center;text-decoration:none}
+  .lookup-btn:hover{background:#EEF2F9}
+  .offer-box{background:var(--navy);color:#fff;border-radius:12px;padding:16px;text-align:center;margin-top:16px}
+  .offer-box .lbl{font-size:12px;text-transform:uppercase;letter-spacing:1px;opacity:.8}
+  .offer-box .amt{font-family:'Anton',Impact,sans-serif;font-size:44px;letter-spacing:2px;line-height:1.1}
+  .offer-box .sub{font-size:12px;opacity:.8}
+  .pct-row{display:flex;gap:6px;justify-content:center;margin-top:10px}
+  .pct{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);color:#fff;padding:5px 14px;border-radius:20px;font-size:13px;font-weight:bold;cursor:pointer}
+  .pct.active{background:#fff;color:var(--navy)}
+  .save-btn{width:100%;background:var(--green);color:#fff;border:none;padding:14px;border-radius:10px;font-weight:900;font-size:16px;cursor:pointer;margin-top:16px}
+  .save-btn:hover{opacity:.92}
+  .log-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+  .log-stats{font-size:13px;color:var(--muted)}
+  .log-stats strong{color:var(--navy)}
+  .export-btn{background:#fff;border:1px solid var(--navy);color:var(--navy);padding:8px 14px;border-radius:8px;font-weight:bold;font-size:12px;cursor:pointer}
+  .log-item{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+  .log-item img{width:46px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+  .log-item .noimg{width:46px;height:64px;border:1px dashed var(--line);border-radius:6px}
+  .log-item .inf{flex:1;min-width:0}
+  .log-item .n{font-weight:bold;font-size:14px}
+  .log-item .d{font-size:12px;color:var(--muted)}
+  .log-item .amts{text-align:right}
+  .log-item .offer{font-weight:900;color:var(--navy);font-size:15px}
+  .log-item .mkt{font-size:11px;color:var(--muted)}
+  .log-item .rm{background:none;border:none;color:var(--red);cursor:pointer;font-size:20px;padding:4px}
+  .empty{color:var(--muted);text-align:center;padding:26px 10px;font-size:14px}
+  .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--green);color:#fff;padding:12px 22px;border-radius:30px;font-weight:bold;z-index:200;transition:transform .3s;box-shadow:0 6px 20px rgba(22,33,62,.3);font-size:14px}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  .bal-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .bal-name{font-weight:bold;flex:1}
+  .bal-detail{font-size:11px;color:var(--muted)}
+  .bal-amt{font-family:'Anton',Impact,sans-serif;color:var(--navy);font-size:18px;letter-spacing:1px}
+  #logSearch{margin:8px 0 4px}
+  .receipt-overlay{position:fixed;inset:0;background:rgba(22,33,62,.6);display:none;align-items:center;justify-content:center;z-index:300;padding:20px}
+  .receipt-overlay.open{display:flex}
+  .receipt{background:#fff;border-radius:16px;padding:26px 30px;text-align:center;max-width:320px;width:100%;border-top:6px solid var(--navy)}
+  .r-brand{font-family:'Anton',Impact,sans-serif;color:var(--navy);letter-spacing:3px;font-size:20px}
+  .r-title{font-family:'Permanent Marker',cursive;font-size:13px;color:#111;text-transform:uppercase;margin-top:2px}
+  .r-amt{font-family:'Anton',Impact,sans-serif;font-size:52px;color:var(--green);margin:10px 0 6px}
+  .r-line{font-size:13px;color:var(--text)}
+  .r-note{font-size:11px;color:var(--muted);font-style:italic;margin-top:10px}
+  .r-close{margin-top:14px;background:var(--navy);color:#fff;border:none;padding:10px 26px;border-radius:8px;font-weight:bold;cursor:pointer}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:10px}
+  .stat{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+  .stat .v{font-family:'Anton',Impact,sans-serif;font-size:20px;color:var(--navy);letter-spacing:1px}
+  .stat .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .cond-link{color:var(--slate);text-decoration:underline;float:right;text-transform:none;letter-spacing:0;font-weight:normal;cursor:pointer}
+  .mc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:10px;margin-top:14px}
+  .mc-tile{cursor:pointer;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg);text-align:center;transition:transform .12s,box-shadow .12s}
+  .mc-tile:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(22,33,62,.15)}
+  .mc-tile img{width:100%;height:110px;object-fit:cover;display:block}
+  .mc-tile .mc-n{font-size:11px;font-weight:bold;padding:5px 4px;line-height:1.2}
+  .mc-tile .mc-v{font-size:10px;color:var(--muted);padding-bottom:5px}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="wordmark">
+      <span class="wm-card">CARD</span>
+      <div class="wm-right">
+        <span class="wm-vault">VAULT</span>
+        <span class="wm-tag2">Appraisal table tool</span>
+      </div>
+    </div>
+    <span class="scanner-badge">Vault Scanner</span>
+  </div>
+</header>
+
+<main>
+  <div class="panel" id="signPanel">
+    <h2>Trader Sign-In</h2>
+    <div id="signedOut">
+      <label>Your name</label>
+      <input type="text" id="signName" placeholder="First name + last initial (e.g. Mason W)" autocomplete="off" list="traderList">
+      <button class="save-btn" style="margin-top:10px;background:var(--navy)" onclick="signIn()">Sign in / Create account</button>
+      <div class="hint">New name makes a new account. Same name gets your old account back — so spell it the same way every time.</div>
+    </div>
+    <div id="signedIn" style="display:none">
+      <div class="bal-row" style="border-bottom:none;padding:4px 0">
+        <span class="bal-name" id="whoName"></span>
+        <span class="bal-detail" id="whoSince"></span>
+        <button class="export-btn" onclick="signOut()">Sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="vaultPanel" style="display:none">
+    <h2>Your Vault — <span id="vaultWho"></span></h2>
+    <div class="stat-grid">
+      <div class="stat"><div class="v" id="vCredit">$0</div><div class="l">Vault credit</div></div>
+      <div class="stat"><div class="v" id="vCards">0</div><div class="l">Cards in vault</div></div>
+      <div class="stat"><div class="v" id="vTrades">0</div><div class="l">Cards traded in</div></div>
+    </div>
+
+    <label>Add a card to your vault</label>
+    <div class="photo-zone" id="mcZone" style="min-height:100px" onclick="document.getElementById('mcPhoto').click()">
+      <span id="mcHint">Add the card's photo (required)</span>
+      <img id="mcPreview" style="display:none" alt="">
+    </div>
+    <input type="file" id="mcPhoto" accept="image/*" capture="environment" style="display:none">
+    <div class="photo-zone" id="mcZoneB" style="min-height:56px;margin-top:8px" onclick="document.getElementById('mcPhotoB').click()">
+      <span id="mcHintB">+ Back photo (optional)</span>
+      <img id="mcPreviewB" style="display:none;max-height:100px" alt="">
+    </div>
+    <input type="file" id="mcPhotoB" accept="image/*" capture="environment" style="display:none">
+    <div class="row">
+      <div style="flex:2;min-width:150px"><label>Card name</label><input type="text" id="mcName" placeholder="e.g. Pikachu V" autocomplete="off"></div>
+      <div><label>Value ($)</label><input type="number" id="mcValue" min="0" step="0.25" inputmode="decimal" placeholder="Optional"></div>
+    </div>
+    <div class="row">
+      <div><label>Type</label><select id="mcType"><option>Pokémon</option><option>Baseball</option><option>Basketball</option><option>Football</option><option>Soccer</option><option>Racing</option><option>Other</option></select></div>
+      <div><label>Condition</label><select id="mcCond"><option>Near Mint</option><option>Lightly Played</option><option>Played</option><option>Rough</option></select></div>
+    </div>
+    <label>Notes</label>
+    <input type="text" id="mcNotes" placeholder="Where you got it, favorite thing about it..." autocomplete="off">
+    <button class="save-btn" style="margin-top:12px" onclick="addMyCard()">Add to my vault</button>
+    <div class="mc-grid" id="mcGrid"></div>
+
+    <div class="hint" style="margin-top:14px">Want to hold a shop card? That happens on the Card Vault website — reserve there, pick it up on Vault Day.</div>
+    <div id="tradeHist" style="margin-top:10px"></div>
+  </div>
+
+  <div class="panel">
+    <h2>New Appraisal</h2>
+
+    <label>Card finder — Pokémon</label>
+    <div class="row">
+      <div style="flex:3;min-width:160px"><input type="text" id="findQ" placeholder="Type a name, e.g. charizard ex" autocomplete="off"></div>
+      <div style="flex:1;min-width:90px"><button class="lookup-btn" style="width:100%" id="findBtn" onclick="findCards()">Find</button></div>
+    </div>
+    <div class="mc-grid" id="findGrid" style="margin-top:10px"></div>
+    <div class="hint">Tap the right card and it fills in the name, photo, and live market price for you. Sports cards: type by hand + check eBay sold prices.</div>
+
+    <div class="photo-zone" id="photoZone" onclick="document.getElementById('photoInput').click()" style="margin-top:14px">
+      <span id="photoHint">Tap to photograph the card</span>
+      <img id="photoPreview" style="display:none" alt="">
+    </div>
+    <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
+    <div class="row" style="margin-top:8px">
+      <div style="flex:1;min-width:140px">
+        <div class="photo-zone" id="backZone" style="min-height:64px" onclick="document.getElementById('backInput').click()">
+          <span id="backHint">+ Back photo (optional)</span>
+          <img id="backPreview" style="display:none;max-height:110px" alt="">
+        </div>
+        <input type="file" id="backInput" accept="image/*" capture="environment" style="display:none">
+      </div>
+      <div style="flex:1;min-width:140px">
+        <button class="lookup-btn" id="ocrBtn" style="width:100%;min-height:64px" onclick="scanPhoto()">Read the card from the photo</button>
+      </div>
+    </div>
+
+    <label>Card name</label>
+    <input type="text" id="cardName" placeholder="e.g. Charizard ex 105/165" autocomplete="off">
+
+    <div class="row">
+      <div>
+        <label>Type</label>
+        <select id="cardType">
+          <option>Pokémon</option><option>Baseball</option><option>Basketball</option>
+          <option>Football</option><option>Soccer</option><option>Racing</option><option>Other</option>
+        </select>
+      </div>
+      <div>
+        <label>Condition <span class="cond-link" onclick="document.getElementById('condOverlay').classList.add('open')">what's this?</span></label>
+        <select id="cardCond">
+          <option>Near Mint</option><option>Lightly Played</option><option>Played</option><option>Rough</option>
+        </select>
+      </div>
+    </div>
+
+    <label>Check the going price</label>
+    <div class="lookup-row">
+      <a class="lookup-btn" id="ebayBtn" target="_blank" rel="noopener">eBay sold prices</a>
+      <a class="lookup-btn" id="tcgBtn" target="_blank" rel="noopener">TCGplayer</a>
+    </div>
+    <div class="hint">Type the card name first, then tap a button — it searches for you. Use SOLD prices, not asking prices.</div>
+
+    <label>Market price ($)</label>
+    <input type="number" id="marketPrice" placeholder="What it actually sells for" min="0" step="0.25" inputmode="decimal">
+
+    <label>Trader's name</label>
+    <input type="text" id="traderName" placeholder="Who's trading it in?" autocomplete="off" list="traderList">
+    <datalist id="traderList"></datalist>
+
+    <div class="offer-box">
+      <div class="lbl">Your Vault Credit offer</div>
+      <div class="amt" id="offerAmt">$0.00</div>
+      <div class="sub" id="offerSub">50% of market, rounded to the quarter</div>
+      <div class="pct-row">
+        <button class="pct" data-p="40">40%</button>
+        <button class="pct active" data-p="50">50%</button>
+        <button class="pct" data-p="60">60%</button>
+      </div>
+    </div>
+
+    <button class="save-btn" onclick="saveAppraisal()">Save appraisal</button>
+  </div>
+
+  <div class="panel">
+    <h2>Trader Credit Balances</h2>
+    <div id="balList"></div>
+    <div class="row" style="margin-top:12px">
+      <div style="flex:2;min-width:150px"><label>Trader</label><input type="text" id="spendWho" placeholder="Name" autocomplete="off" list="traderList"></div>
+      <div><label>Credit spent ($)</label><input type="number" id="spendAmt" min="0" step="0.25" inputmode="decimal"></div>
+    </div>
+    <button class="export-btn" style="margin-top:10px" onclick="recordSpend()">Record credit spent</button>
+    <div class="hint">When a kid uses their credit on Vault Day, record it here so their balance stays right. Spell names the same way every time.</div>
+  </div>
+
+  <div class="panel">
+    <div class="log-head">
+      <h2 style="margin:0">Appraisal Log</h2>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="export-btn" onclick="exportCSV()">Spreadsheet</button>
+        <button class="export-btn" onclick="backupJSON()">Save</button>
+        <button class="export-btn" onclick="document.getElementById('restoreInput').click()">Restore</button>
+      </div>
+    </div>
+    <input type="file" id="restoreInput" accept=".json,application/json" style="display:none">
+    <div class="hint">Spreadsheet = the log as a file you can open in Excel or Numbers. Save = puts EVERYTHING (log, accounts, credit, holds, vault cards) into one file. Restore = load that file on any device to get everything back.</div>
+    <div class="log-stats" id="logStats"></div>
+    <input type="text" id="logSearch" placeholder="Search log by card or trader" autocomplete="off">
+    <div id="logList"></div>
+  </div>
+</main>
+
+<div class="receipt-overlay" id="mcOverlay" onclick="this.classList.remove('open')">
+  <div class="receipt" style="max-width:340px" onclick="event.stopPropagation()">
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+      <img id="mcdImg" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid var(--line)" alt="">
+      <img id="mcdImgB" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid var(--line);display:none" alt="">
+    </div>
+    <div class="r-line" style="font-weight:900;font-size:17px;margin-top:10px" id="mcdName"></div>
+    <div class="r-line" id="mcdMeta"></div>
+    <div class="r-amt" id="mcdValue" style="font-size:34px;margin:6px 0"></div>
+    <div class="r-line" id="mcdNotes" style="font-style:italic;color:var(--muted)"></div>
+    <div class="r-line" id="mcdDate" style="font-size:11px;color:var(--muted);margin-top:6px"></div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+      <button class="r-close" style="margin-top:0" onclick="document.getElementById('mcOverlay').classList.remove('open')">Close</button>
+      <button class="r-close" style="margin-top:0;background:var(--red)" onclick="deleteMyCard()">Remove</button>
+    </div>
+  </div>
+</div>
+
+<div class="receipt-overlay" id="condOverlay" onclick="this.classList.remove('open')">
+  <div class="receipt" style="text-align:left;max-width:380px" onclick="event.stopPropagation()">
+    <div class="r-brand" style="text-align:center">CONDITION GUIDE</div>
+    <div style="font-size:13px;line-height:1.65;margin-top:10px">
+      <p style="margin:7px 0"><strong>Near Mint</strong> — fresh from the pack. Sharp corners, no scratches. Pays full.</p>
+      <p style="margin:7px 0"><strong>Lightly Played</strong> — tiny corner wear or light scratches you only see up close. Takes off 15%.</p>
+      <p style="margin:7px 0"><strong>Played</strong> — clear edge whitening, scratches, maybe a soft crease. Takes off 30%.</p>
+      <p style="margin:7px 0"><strong>Rough</strong> — creases, bends, writing, or water marks. Takes off 50%.</p>
+      <p style="margin:10px 0 0;color:var(--muted);font-size:12px;font-style:italic">Check corners first, then hold it flat under the light for scratches. When you're not sure, pick the lower grade — you can always be generous on purpose.</p>
+    </div>
+    <div style="text-align:center"><button class="r-close" onclick="document.getElementById('condOverlay').classList.remove('open')">Got it</button></div>
+  </div>
+</div>
+
+<div class="receipt-overlay" id="receiptOverlay" onclick="closeReceipt()">
+  <div class="receipt" onclick="event.stopPropagation()">
+    <div class="r-brand">CARD VAULT</div>
+    <div class="r-title">Vault Credit Receipt</div>
+    <div class="r-amt" id="rAmt"></div>
+    <div class="r-line" id="rCard"></div>
+    <div class="r-line" id="rTrader"></div>
+    <div class="r-line" id="rDate"></div>
+    <div class="r-note">Spend it on holds for the next Vault Day</div>
+    <button class="r-close" onclick="closeReceipt()">Done</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+let pct = 50;
+let photoData = "";
+let log = [];
+try{ log = JSON.parse(localStorage.getItem("cv_appraisals") || "[]"); }catch(e){}
+let spends = [];
+try{ spends = JSON.parse(localStorage.getItem("cv_spends") || "[]"); }catch(e){}
+let traders = [];
+try{ traders = JSON.parse(localStorage.getItem("cv_traders") || "[]"); }catch(e){}
+let holds = [];
+try{ holds = JSON.parse(localStorage.getItem("cv_holds2") || "[]"); }catch(e){}
+let current = localStorage.getItem("cv_current") || "";
+let mycards = [];
+try{ mycards = JSON.parse(localStorage.getItem("cv_mycards") || "[]"); }catch(e){}
+let mcPhotoData = "";
+let mcOpenIdx = -1;
+const CONDX = {"Near Mint":1, "Lightly Played":.85, "Played":.7, "Rough":.5};
+
+// clean-up: drop credit-spent records for names that don't belong to any real trader
+{
+  const validName = w => traders.some(t => t.name.toLowerCase() === w.toLowerCase()) || log.some(e => (e.trader || "").toLowerCase() === w.toLowerCase());
+  const cleaned = spends.filter(s => validName(s.who));
+  if(cleaned.length !== spends.length){
+    spends = cleaned;
+    try{ localStorage.setItem("cv_spends", JSON.stringify(spends)); }catch(e){}
+  }
+}
+
+// shrink any photo (default ~300px for storage; bigger for the card reader)
+function shrink(file, cb, maxW){
+  maxW = maxW || 300;
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement("canvas");
+    const s = Math.min(1, maxW / img.width);
+    c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    cb(c.toDataURL("image/jpeg", .8));
+    URL.revokeObjectURL(img.src);
+  };
+  img.src = URL.createObjectURL(file);
+}
+function shrinkP(file, maxW){ return new Promise(res => shrink(file, res, maxW)); }
+let lastPhotoFile = null;
+let backPhotoData = "";
+let mcPhotoDataB = "";
+
+// --- card reader: OCR the photo, then search the database ---
+function pickNameGuess(lines){
+  for(const l of lines.slice(0, 6)){
+    let t = l.replace(/HP\s*\d+/ig, "").replace(/[^A-Za-z'\- .]/g, " ").replace(/\s+/g, " ").trim();
+    if(t.length >= 4 && t.split(" ").length <= 4 && !/^(basic|stage|trainer|energy|evolves|item|supporter|pok)/i.test(t)) return t;
+  }
+  return "";
+}
+async function scanPhoto(){
+  if(!lastPhotoFile){ showToast("Add the front photo first"); return; }
+  if(typeof Tesseract === "undefined"){ showToast("Card reader needs internet to load"); return; }
+  $("ocrBtn").textContent = "Reading the card...";
+  try{
+    const big = await shrinkP(lastPhotoFile, 1000);
+    const res = await Tesseract.recognize(big, "eng");
+    const lines = (res.data.lines || []).map(l => l.text.trim()).filter(Boolean);
+    const guess = pickNameGuess(lines);
+    if(!guess){
+      showToast("Couldn't read it — try a sharper, straighter photo");
+    } else {
+      showToast('I think it says "' + guess + '" — searching...');
+      $("findQ").value = guess;
+      await findCards();
+      if(found.length === 0 && !$("cardName").value) $("cardName").value = guess;
+      updateLookups();
+    }
+  }catch(e){ showToast("Card reader hiccuped — type the name instead"); }
+  $("ocrBtn").textContent = "Read the card from the photo";
+}
+$("backInput").addEventListener("change", e => {
+  const f = e.target.files[0]; if(!f) return;
+  shrink(f, data => {
+    backPhotoData = data;
+    $("backPreview").src = data; $("backPreview").style.display = "";
+    $("backHint").style.display = "none";
+  });
+});
+$("mcPhotoB").addEventListener("change", e => {
+  const f = e.target.files[0]; if(!f) return;
+  shrink(f, data => {
+    mcPhotoDataB = data;
+    $("mcPreviewB").src = data; $("mcPreviewB").style.display = "";
+    $("mcHintB").style.display = "none";
+  });
+});
+
+// --- photo: downscale so the log never fills up storage ---
+$("photoInput").addEventListener("change", e => {
+  const f = e.target.files[0]; if(!f) return;
+  lastPhotoFile = f;
+  shrink(f, data => {
+    photoData = data;
+    $("photoPreview").src = data;
+    $("photoPreview").style.display = "";
+    $("photoHint").style.display = "none";
+  });
+});
+
+// --- card finder (live Pokémon database) ---
+let found = [];
+function bestPrice(c){
+  const t = c.tcgplayer && c.tcgplayer.prices;
+  if(t){ for(const k in t){ if(t[k] && t[k].market) return t[k].market; } }
+  if(c.cardmarket && c.cardmarket.prices && c.cardmarket.prices.averageSellPrice) return c.cardmarket.prices.averageSellPrice;
+  return 0;
+}
+async function findCards(){
+  const q = $("findQ").value.trim();
+  if(!q){ showToast("Type a card name first"); return; }
+  $("findBtn").textContent = "Searching...";
+  $("findGrid").innerHTML = "";
+  try{
+    const r = await fetch('https://api.pokemontcg.io/v2/cards?q=name:"' + encodeURIComponent(q) + '*"&pageSize=12&orderBy=-set.releaseDate');
+    const d = await r.json();
+    found = d.data || [];
+    if(found.length === 0){
+      $("findGrid").innerHTML = `<div class="empty" style="grid-column:1/-1">No Pokémon cards found — check the spelling, or type it by hand below.</div>`;
+    } else {
+      $("findGrid").innerHTML = found.map((c, i) => {
+        const p = bestPrice(c);
+        return `<div class="mc-tile" onclick="pickFound(${i})"><img src="${c.images.small}" loading="lazy" alt=""><div class="mc-n">${c.name}</div><div class="mc-v">${c.set.name}${p ? " · $" + p.toFixed(2) : ""}</div></div>`;
+      }).join("");
+    }
+  }catch(e){ showToast("Couldn't reach the card database — are you online?"); }
+  $("findBtn").textContent = "Find";
+}
+function pickFound(i){
+  const c = found[i]; if(!c) return;
+  $("cardName").value = c.name + (c.number ? " " + c.number : "") + (c.set && c.set.printedTotal ? "/" + c.set.printedTotal : "") + " · " + c.set.name;
+  $("cardType").value = "Pokémon";
+  const p = bestPrice(c);
+  if(p) $("marketPrice").value = p.toFixed(2);
+  photoData = c.images.small;
+  $("photoPreview").src = photoData; $("photoPreview").style.display = ""; $("photoHint").style.display = "none";
+  updateOffer(); updateLookups();
+  $("findGrid").innerHTML = ""; $("findQ").value = "";
+  showToast(p ? "Found it — market price filled in" : "Found it — price it with eBay sold");
+}
+$("findQ").addEventListener("keydown", e => { if(e.key === "Enter") findCards(); });
+
+// --- price lookups ---
+function updateLookups(){
+  const q = encodeURIComponent($("cardName").value.trim() || "trading card");
+  $("ebayBtn").href = "https://www.ebay.com/sch/i.html?_nkw=" + q + "&LH_Sold=1&LH_Complete=1";
+  $("tcgBtn").href = "https://www.tcgplayer.com/search/all/product?q=" + q;
+}
+$("cardName").addEventListener("input", updateLookups);
+updateLookups();
+
+// --- offer math ---
+function roundQuarter(x){ return Math.round(x * 4) / 4; }
+function currentOffer(m){ return roundQuarter(m * pct / 100 * CONDX[$("cardCond").value]); }
+function updateOffer(){
+  const m = parseFloat($("marketPrice").value) || 0;
+  if(m <= 0){
+    $("offerAmt").textContent = "$ —";
+    $("offerSub").textContent = "Enter the market price and I'll do the math";
+    return;
+  }
+  $("offerAmt").textContent = "$" + currentOffer(m).toFixed(2);
+  const cx = CONDX[$("cardCond").value];
+  $("offerSub").textContent = pct + "% of market" + (cx < 1 ? " · " + $("cardCond").value + " takes off " + Math.round((1 - cx) * 100) + "%" : "") + ", rounded to the quarter";
+}
+$("marketPrice").addEventListener("input", updateOffer);
+document.querySelectorAll(".pct").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".pct").forEach(x => x.classList.remove("active"));
+  b.classList.add("active"); pct = +b.dataset.p; updateOffer();
+}));
+
+// --- save ---
+function saveAppraisal(){
+  if(!current){ showToast("Sign the trader in first (top of the page)"); return; }
+  const name = $("cardName").value.trim();
+  const m = parseFloat($("marketPrice").value) || 0;
+  if(!name){ showToast("Type the card's name first"); return; }
+  if(m <= 0){ showToast("Enter the market price"); return; }
+  const entry = {
+    name, type: $("cardType").value, cond: $("cardCond").value,
+    market: m, offer: currentOffer(m), pctUsed: pct,
+    trader: $("traderName").value.trim() || "—",
+    date: new Date().toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"}),
+    photo: photoData, photoB: backPhotoData
+  };
+  log.unshift(entry);
+  persist(); renderLog();
+  $("cardName").value = ""; $("marketPrice").value = ""; $("traderName").value = "";
+  photoData = ""; $("photoPreview").style.display = "none"; $("photoHint").style.display = "";
+  $("photoInput").value = ""; lastPhotoFile = null;
+  backPhotoData = ""; $("backPreview").style.display = "none"; $("backHint").style.display = ""; $("backInput").value = "";
+  updateOffer(); updateLookups();
+  showReceipt(entry);
+}
+function persist(){
+  try{ localStorage.setItem("cv_appraisals", JSON.stringify(log)); }
+  catch(e){ // storage full: drop oldest photos, keep the numbers
+    for(let i = log.length - 1; i >= 0 && log[i]; i--){ if(log[i].photo){ log[i].photo = ""; break; } }
+    try{ localStorage.setItem("cv_appraisals", JSON.stringify(log)); }catch(e2){}
+  }
+}
+
+// --- log ---
+function removeEntry(i){
+  if(!confirm("Delete this appraisal?")) return;
+  log.splice(i, 1); persist(); renderLog();
+}
+function renderLog(){
+  const list = $("logList");
+  const totalOffer = log.reduce((s, e) => s + e.offer, 0);
+  const totalMarket = log.reduce((s, e) => s + e.market, 0);
+  $("logStats").innerHTML = log.length === 0 ? "" :
+    `<div class="stat-grid">
+      <div class="stat"><div class="v">${log.length}</div><div class="l">Appraisals</div></div>
+      <div class="stat"><div class="v">$${totalOffer.toFixed(0)}</div><div class="l">Credit issued</div></div>
+      <div class="stat"><div class="v">$${totalMarket.toFixed(0)}</div><div class="l">Market taken in</div></div>
+      <div class="stat"><div class="v">$${(totalMarket - totalOffer).toFixed(0)}</div><div class="l">Value edge</div></div>
+    </div>`;
+  if(log.length === 0){ list.innerHTML = `<div class="empty">No appraisals yet.<br>Your first trade-in will show up here.</div>`; renderBalances(); return; }
+  list.innerHTML = "";
+  const q = ($("logSearch").value || "").trim().toLowerCase();
+  log.forEach((e, i) => {
+    if(q && !((e.name + " " + e.trader + " " + e.type).toLowerCase().includes(q))) return;
+    const row = document.createElement("div");
+    row.className = "log-item";
+    row.innerHTML = `
+      ${e.photo ? `<img src="${e.photo}" alt="">` : `<div class="noimg"></div>`}
+      <div class="inf">
+        <div class="n">${e.name}</div>
+        <div class="d">${e.type} · ${e.cond} · ${e.trader} · ${e.date}</div>
+      </div>
+      <div class="amts">
+        <div class="offer">$${e.offer.toFixed(2)}</div>
+        <div class="mkt">mkt $${e.market.toFixed(2)}</div>
+      </div>
+      <button class="rm" onclick="removeEntry(${i})">&times;</button>`;
+    list.appendChild(row);
+  });
+  if(list.children.length === 0) list.innerHTML = `<div class="empty">Nothing matches that search.</div>`;
+  renderBalances();
+}
+
+function renderBalances(){
+  const el = $("balList");
+  const map = {};
+  log.forEach(e => { if(e.trader && e.trader !== "—"){ map[e.trader] = map[e.trader] || {earned:0, spent:0}; map[e.trader].earned += e.offer; } });
+  spends.forEach(s => { map[s.who] = map[s.who] || {earned:0, spent:0}; map[s.who].spent += s.amt; });
+  const names = Object.keys(map);
+  const allNames = [...new Set([...names, ...traders.map(t => t.name)])];
+  $("traderList").innerHTML = allNames.map(n => `<option value="${n}">`).join("");
+  if(current) renderVault();
+  if(names.length === 0){ el.innerHTML = `<div class="empty">No trader credit yet.<br>Save an appraisal with the trader's name and their balance shows up here.</div>`; return; }
+  names.sort((a, b) => (map[b].earned - map[b].spent) - (map[a].earned - map[a].spent));
+  el.innerHTML = names.map(n => {
+    const b = map[n];
+    return `<div class="bal-row"><span class="bal-name">${n}</span><span class="bal-detail">earned $${b.earned.toFixed(2)} · spent $${b.spent.toFixed(2)}</span><span class="bal-amt">$${(b.earned - b.spent).toFixed(2)}</span></div>`;
+  }).join("");
+}
+function recordSpend(){
+  const who = $("spendWho").value.trim();
+  const amt = parseFloat($("spendAmt").value) || 0;
+  if(!who){ showToast("Whose credit is it?"); return; }
+  if(amt <= 0){ showToast("Enter the amount they spent"); return; }
+  const known = [...new Set([...traders.map(t => t.name), ...log.map(e => e.trader).filter(t => t && t !== "—")])];
+  const match = known.find(k => k.toLowerCase() === who.toLowerCase());
+  if(!match){ showToast('No trader named "' + who + '" — check the spelling'); return; }
+  let earned = 0, spent = 0;
+  log.forEach(e => { if(e.trader === match) earned += e.offer; });
+  spends.forEach(s => { if(s.who === match) spent += s.amt; });
+  if(amt > earned - spent + 0.001){ showToast(match + " only has $" + (earned - spent).toFixed(2) + " of credit"); return; }
+  spends.push({who: match, amt, date: new Date().toLocaleDateString()});
+  try{ localStorage.setItem("cv_spends", JSON.stringify(spends)); }catch(e){}
+  $("spendWho").value = ""; $("spendAmt").value = "";
+  renderBalances(); showToast("Credit spent recorded");
+}
+function saveT(){
+  try{
+    localStorage.setItem("cv_traders", JSON.stringify(traders));
+    localStorage.setItem("cv_holds2", JSON.stringify(holds));
+    localStorage.setItem("cv_current", current);
+    localStorage.setItem("cv_mycards", JSON.stringify(mycards));
+  }catch(e){}
+}
+$("mcPhoto").addEventListener("change", e => {
+  const f = e.target.files[0]; if(!f) return;
+  shrink(f, data => {
+    mcPhotoData = data;
+    $("mcPreview").src = data; $("mcPreview").style.display = "";
+    $("mcHint").style.display = "none";
+  });
+});
+function addMyCard(){
+  if(!current){ showToast("Sign in first"); return; }
+  if(!mcPhotoData){ showToast("The photo is required — tap the box to add it"); return; }
+  const n = $("mcName").value.trim();
+  if(!n){ showToast("Type the card's name"); return; }
+  mycards.push({
+    owner: current, name: n, type: $("mcType").value, cond: $("mcCond").value,
+    value: parseFloat($("mcValue").value) || 0, notes: $("mcNotes").value.trim(),
+    date: new Date().toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"}),
+    photo: mcPhotoData, photoB: mcPhotoDataB
+  });
+  saveT();
+  $("mcName").value = ""; $("mcValue").value = ""; $("mcNotes").value = "";
+  mcPhotoData = ""; $("mcPreview").style.display = "none"; $("mcHint").style.display = ""; $("mcPhoto").value = "";
+  mcPhotoDataB = ""; $("mcPreviewB").style.display = "none"; $("mcHintB").style.display = ""; $("mcPhotoB").value = "";
+  renderVault(); showToast("Card added to your vault");
+}
+function openMyCard(i){
+  const c = mycards[i]; if(!c) return;
+  mcOpenIdx = i;
+  $("mcdImg").src = c.photo;
+  if(c.photoB){ $("mcdImgB").src = c.photoB; $("mcdImgB").style.display = ""; }
+  else { $("mcdImgB").style.display = "none"; }
+  $("mcdName").textContent = c.name;
+  $("mcdMeta").textContent = c.type + " · " + c.cond;
+  $("mcdValue").textContent = c.value > 0 ? "$" + c.value.toFixed(2) : "";
+  $("mcdNotes").textContent = c.notes || "";
+  $("mcdDate").textContent = "Added " + c.date + " · " + c.owner + "'s vault";
+  $("mcOverlay").classList.add("open");
+}
+function deleteMyCard(){
+  if(mcOpenIdx < 0) return;
+  if(!confirm("Remove this card from your vault?")) return;
+  mycards.splice(mcOpenIdx, 1); mcOpenIdx = -1;
+  saveT(); renderVault();
+  $("mcOverlay").classList.remove("open");
+}
+function signIn(){
+  const n = $("signName").value.trim();
+  if(!n){ showToast("Type your name first"); return; }
+  let t = traders.find(x => x.name.toLowerCase() === n.toLowerCase());
+  if(!t){
+    t = {name: n, joined: new Date().toLocaleDateString("en-US", {month:"short", year:"numeric"})};
+    traders.push(t);
+    showToast("Account created — welcome, " + n + "!");
+  } else {
+    showToast("Welcome back, " + t.name + "!");
+  }
+  current = t.name; saveT(); $("signName").value = ""; renderSign();
+}
+function signOut(){ current = ""; saveT(); renderSign(); }
+function renderSign(){
+  const t = traders.find(x => x.name === current);
+  $("signedOut").style.display = t ? "none" : "";
+  $("signedIn").style.display = t ? "" : "none";
+  $("vaultPanel").style.display = t ? "" : "none";
+  if(t){
+    $("whoName").textContent = t.name;
+    $("whoSince").textContent = "trader since " + t.joined;
+    $("vaultWho").textContent = t.name;
+    $("traderName").value = t.name;
+    renderVault();
+  }
+}
+function renderVault(){
+  if(!current) return;
+  const myTrades = log.filter(e => e.trader === current);
+  let earned = 0, spent = 0;
+  log.forEach(e => { if(e.trader === current) earned += e.offer; });
+  spends.forEach(s => { if(s.who === current) spent += s.amt; });
+  $("vCredit").textContent = "$" + (earned - spent).toFixed(2);
+  $("vTrades").textContent = myTrades.length;
+  const myCards = mycards.filter(c => c.owner === current);
+  $("vCards").textContent = myCards.length;
+  $("mcGrid").innerHTML = myCards.length === 0 ?
+    `<div class="empty" style="grid-column:1/-1;padding:12px">No cards in your vault yet — add your first one above.</div>` :
+    myCards.map(c => `<div class="mc-tile" onclick="openMyCard(${mycards.indexOf(c)})"><img src="${c.photo}" alt=""><div class="mc-n">${c.name}</div><div class="mc-v">${c.value > 0 ? "$" + c.value.toFixed(2) : c.cond}</div></div>`).join("");
+  $("tradeHist").innerHTML = myTrades.length === 0 ? "" :
+    `<label>Cards you traded in</label>` + myTrades.map(e => `<div class="bal-row">${e.photo ? `<img src="${e.photo}" style="width:30px;height:42px;object-fit:cover;border-radius:4px;border:1px solid var(--line)">` : ""}<span class="bal-name">${e.name}</span><span class="bal-detail">${e.date}</span><span class="bal-amt">$${e.offer.toFixed(2)}</span></div>`).join("");
+}
+function showReceipt(e){
+  $("rAmt").textContent = "$" + e.offer.toFixed(2);
+  $("rCard").textContent = e.name;
+  $("rTrader").textContent = "For: " + e.trader;
+  $("rDate").textContent = e.date;
+  $("receiptOverlay").classList.add("open");
+}
+function closeReceipt(){ $("receiptOverlay").classList.remove("open"); }
+
+// --- export ---
+function exportCSV(){
+  if(log.length === 0){ showToast("Nothing to export yet"); return; }
+  const esc = s => `"${String(s).replace(/"/g, '""')}"`;
+  const rows = [["Date","Card","Type","Condition","Trader","Market $","Credit offered $","% used"]];
+  log.forEach(e => rows.push([e.date, e.name, e.type, e.cond, e.trader, e.market.toFixed(2), e.offer.toFixed(2), e.pctUsed + "%"]));
+  const csv = rows.map(r => r.map(esc).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv"}));
+  a.download = "vault_appraisals.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+let toastTimer;
+function showToast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+function backupJSON(){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({log, spends, traders, holds, mycards})], {type: "application/json"}));
+  a.download = "vault_backup.json"; a.click(); URL.revokeObjectURL(a.href);
+  showToast("Backup downloaded — keep it safe");
+}
+$("restoreInput").addEventListener("change", e => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const d = JSON.parse(r.result);
+      if(!Array.isArray(d.log) || !Array.isArray(d.spends)) throw 0;
+      log = d.log; spends = d.spends;
+      if(Array.isArray(d.traders)) traders = d.traders;
+      if(Array.isArray(d.holds)) holds = d.holds;
+      if(Array.isArray(d.mycards)) mycards = d.mycards;
+      persist(); try{ localStorage.setItem("cv_spends", JSON.stringify(spends)); }catch(err){}
+      saveT(); renderLog(); renderSign(); showToast("Backup restored");
+    }catch(err){ showToast("That file isn't a Vault backup"); }
+  };
+  r.readAsText(f); e.target.value = "";
+});
+const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+$("photoHint").textContent = isTouch ? "Tap to photograph the card" : "Click to add the card photo";
+$("cardCond").addEventListener("change", updateOffer);
+$("logSearch").addEventListener("input", renderLog);
+updateOffer(); renderLog(); renderSign();
+</script>
+<script>
+if(location.protocol.indexOf("http") === 0 && "serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
+</body>
+</html>

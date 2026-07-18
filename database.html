@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1F2E5A">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Vault Database — Card Vault Mission Control</title>
+<style>
+  :root{
+    --navy:#1F2E5A;--navy-deep:#16213E;--slate:#5B7A99;
+    --bg:#F4F6FB;--card-bg:#FFFFFF;--line:#D8DFEC;
+    --text:#1A2440;--muted:#5B7A99;--green:#2E9E6F;--red:#D65454;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Trebuchet MS','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;padding-bottom:60px}
+  header{background:#fff;padding:16px 20px;border-bottom:3px solid var(--navy);position:sticky;top:0;z-index:50;box-shadow:0 4px 14px rgba(22,33,62,.12)}
+  .header-inner{max-width:900px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .wordmark{display:inline-flex;align-items:stretch;gap:1px;text-align:left}
+  .wm-card{writing-mode:vertical-rl;transform:rotate(180deg);font-family:'Anton',Impact,'Arial Narrow',sans-serif;color:var(--slate);line-height:.9;letter-spacing:1px;align-self:flex-start;font-size:13px}
+  .wm-right{display:flex;flex-direction:column}
+  .wm-vault{font-family:'Anton',Impact,'Arial Narrow',sans-serif;color:var(--navy);line-height:.92;letter-spacing:3px;font-size:32px}
+  .wm-tag2{font-size:11px;color:var(--muted);font-style:italic;margin-top:4px}
+  .db-badge{font-family:'Permanent Marker',cursive;color:#111;font-size:15px;text-transform:uppercase}
+  main{max-width:900px;margin:0 auto;padding:18px 16px}
+  .panel{background:var(--card-bg);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px;box-shadow:0 4px 14px rgba(22,33,62,.06)}
+  .panel h2{font-size:17px;margin-bottom:12px;color:var(--navy)}
+  .btn{background:#fff;border:1px solid var(--navy);color:var(--navy);padding:10px 16px;border-radius:8px;font-weight:bold;font-size:13px;cursor:pointer}
+  .btn:hover{background:#EEF2F9}
+  .btn.solid{background:var(--navy);color:#fff}
+  .btn.solid:hover{opacity:.92}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+  .stat{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center}
+  .stat .v{font-family:'Anton',Impact,sans-serif;font-size:22px;color:var(--navy);letter-spacing:1px}
+  .stat .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .tab{background:#fff;border:1px solid var(--line);color:var(--muted);padding:8px 16px;border-radius:20px;font-size:13px;font-weight:bold;cursor:pointer}
+  .tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  input[type=text]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#fff;color:var(--text);outline:none;font-family:inherit;margin-bottom:10px}
+  input[type=text]:focus{border-color:var(--slate)}
+  .tblwrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse}
+  th{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.5px;text-align:left;padding:8px;border-bottom:2px solid var(--line);cursor:pointer;white-space:nowrap}
+  td{padding:8px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+  td img{width:34px;height:46px;object-fit:cover;border-radius:4px;border:1px solid var(--line)}
+  .empty{color:var(--muted);text-align:center;padding:30px 10px;font-size:14px}
+  .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--green);color:#fff;padding:12px 22px;border-radius:30px;font-weight:bold;z-index:200;transition:transform .3s;box-shadow:0 6px 20px rgba(22,33,62,.3);font-size:14px}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .pos{color:var(--green);font-weight:bold}
+  .neg{color:var(--red);font-weight:bold}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="wordmark">
+      <span class="wm-card">CARD</span>
+      <div class="wm-right">
+        <span class="wm-vault">VAULT</span>
+        <span class="wm-tag2">Mission control — the whole business in one place</span>
+      </div>
+    </div>
+    <span class="db-badge">Vault Database</span>
+  </div>
+</header>
+
+<main>
+  <div class="panel">
+    <h2>Load data</h2>
+    <div class="btn-row">
+      <button class="btn solid" onclick="document.getElementById('backupFile').click()">Load scanner Save file(s)</button>
+      <button class="btn" onclick="document.getElementById('storeFile').click()">Load store page (inventory)</button>
+      <button class="btn" onclick="clearAll()" style="border-color:var(--red);color:var(--red)">Clear database</button>
+    </div>
+    <input type="file" id="backupFile" accept=".json,application/json" multiple style="display:none">
+    <input type="file" id="storeFile" accept=".html,text/html" style="display:none">
+    <div class="hint">Scanner Save files (vault_backup.json) merge in — load them from every device and nothing gets counted twice. Loading a CARD_VAULT_store file pulls in the shop inventory. The database remembers everything between visits.</div>
+  </div>
+
+  <div class="panel">
+    <h2>The business at a glance</h2>
+    <div class="stat-grid" id="statGrid"></div>
+  </div>
+
+  <div class="panel">
+    <div class="tabs">
+      <button class="tab active" data-t="inventory">Inventory</button>
+      <button class="tab" data-t="traders">Traders</button>
+      <button class="tab" data-t="appraisals">Appraisals</button>
+      <button class="tab" data-t="vaultcards">Vault Cards</button>
+    </div>
+    <input type="text" id="q" placeholder="Search this table..." autocomplete="off">
+    <div class="tblwrap" id="tbl"></div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn" onclick="exportCSV()">This table as spreadsheet</button>
+      <button class="btn solid" onclick="exportMaster()">Export master save</button>
+    </div>
+    <div class="hint">The master save is one file with everything merged — restore it in the Vault Scanner on any device and that device is fully up to date.</div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+let db = {log: [], spends: [], traders: [], holds: [], mycards: [], inventory: []};
+try{ const s = JSON.parse(localStorage.getItem("cvdb") || "null"); if(s) db = Object.assign(db, s); }catch(e){}
+let tab = "inventory";
+
+function persist(){
+  try{ localStorage.setItem("cvdb", JSON.stringify(db)); }
+  catch(e){ showToast("Storage is full — export the master save to keep your data safe"); }
+}
+function mergeArr(target, add){
+  const seen = new Set(target.map(x => JSON.stringify(x)));
+  let n = 0;
+  (add || []).forEach(x => {
+    const k = JSON.stringify(x);
+    if(!seen.has(k)){ target.push(x); seen.add(k); n++; }
+  });
+  return n;
+}
+
+$("backupFile").addEventListener("change", e => {
+  const files = [...e.target.files]; if(files.length === 0) return;
+  let done = 0, added = 0;
+  files.forEach(f => {
+    const r = new FileReader();
+    r.onload = () => {
+      try{
+        const d = JSON.parse(r.result);
+        added += mergeArr(db.log, d.log);
+        added += mergeArr(db.spends, d.spends);
+        added += mergeArr(db.traders, d.traders);
+        added += mergeArr(db.holds, d.holds);
+        added += mergeArr(db.mycards, d.mycards);
+      }catch(err){ showToast(f.name + " isn't a scanner Save file"); }
+      if(++done === files.length){ persist(); renderAll(); showToast(added + " new records merged in"); }
+    };
+    r.readAsText(f);
+  });
+  e.target.value = "";
+});
+
+$("storeFile").addEventListener("change", e => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    const m = r.result.match(/const cards = (\[[\s\S]*?\]);/);
+    if(!m){ showToast("Couldn't find the card list in that file"); return; }
+    try{
+      let inv = JSON.parse(m[1]);
+      inv.forEach(c => { if(c.img && c.img.length > 500) c.img = ""; if(c.back) delete c.back; });
+      db.inventory = inv;
+      persist(); renderAll();
+      showToast("Inventory loaded: " + inv.length + " cards");
+    }catch(err){ showToast("That file's card list couldn't be read"); }
+  };
+  r.readAsText(f);
+  e.target.value = "";
+});
+
+function clearAll(){
+  if(!confirm("Clear the whole database? (Your scanner and store files are not touched — you can re-load them.)")) return;
+  db = {log: [], spends: [], traders: [], holds: [], mycards: [], inventory: []};
+  persist(); renderAll(); showToast("Database cleared");
+}
+
+function balances(){
+  const map = {};
+  db.log.forEach(e => { if(e.trader && e.trader !== "—"){ map[e.trader] = map[e.trader] || {earned:0, spent:0}; map[e.trader].earned += e.offer; } });
+  db.spends.forEach(s => { map[s.who] = map[s.who] || {earned:0, spent:0}; map[s.who].spent += s.amt; });
+  db.traders.forEach(t => { map[t.name] = map[t.name] || {earned:0, spent:0}; });
+  return map;
+}
+
+function renderStats(){
+  const bal = balances();
+  const credit = Object.values(bal).reduce((s, b) => s + b.earned - b.spent, 0);
+  const invValue = db.inventory.reduce((s, c) => s + (c.price || 0), 0);
+  const marketIn = db.log.reduce((s, e) => s + e.market, 0);
+  const creditOut = db.log.reduce((s, e) => s + e.offer, 0);
+  $("statGrid").innerHTML = `
+    <div class="stat"><div class="v">${db.inventory.length}</div><div class="l">Cards in shop</div></div>
+    <div class="stat"><div class="v">$${invValue.toFixed(0)}</div><div class="l">Shop value</div></div>
+    <div class="stat"><div class="v">${Object.keys(bal).length}</div><div class="l">Traders</div></div>
+    <div class="stat"><div class="v">$${credit.toFixed(0)}</div><div class="l">Credit owed</div></div>
+    <div class="stat"><div class="v">${db.log.length}</div><div class="l">Appraisals</div></div>
+    <div class="stat"><div class="v">$${(marketIn - creditOut).toFixed(0)}</div><div class="l">Value edge</div></div>
+    <div class="stat"><div class="v">${db.mycards.length}</div><div class="l">Vault cards</div></div>`;
+}
+
+const TABLES = {
+  inventory: {
+    head: ["Card", "Type", "Details", "Price", "Rarity"],
+    rows: () => db.inventory.map(c => [c.name, c.sport, c.meta, "$" + (c.price || 0), c.rarity]),
+    empty: "No inventory yet — load a CARD_VAULT_store file."
+  },
+  traders: {
+    head: ["Trader", "Joined", "Earned", "Spent", "Balance"],
+    rows: () => {
+      const bal = balances();
+      const joined = {}; db.traders.forEach(t => joined[t.name] = t.joined || "");
+      return Object.keys(bal).sort((a, b) => (bal[b].earned - bal[b].spent) - (bal[a].earned - bal[a].spent))
+        .map(n => [n, joined[n] || "—", "$" + bal[n].earned.toFixed(2), "$" + bal[n].spent.toFixed(2),
+          {html: `<span class="${bal[n].earned - bal[n].spent >= 0 ? "pos" : "neg"}">$${(bal[n].earned - bal[n].spent).toFixed(2)}</span>`}]);
+    },
+    empty: "No traders yet — load a scanner Save file."
+  },
+  appraisals: {
+    head: ["Date", "Card", "Type", "Condition", "Trader", "Market", "Credit"],
+    rows: () => db.log.map(e => [e.date, e.name, e.type, e.cond, e.trader, "$" + e.market.toFixed(2), "$" + e.offer.toFixed(2)]),
+    empty: "No appraisals yet — load a scanner Save file."
+  },
+  vaultcards: {
+    head: ["", "Card", "Owner", "Type", "Condition", "Value", "Notes", "Added"],
+    rows: () => db.mycards.map(c => [
+      {html: c.photo ? `<img src="${c.photo}" alt="">` : ""},
+      c.name, c.owner, c.type, c.cond, c.value > 0 ? "$" + c.value.toFixed(2) : "—", c.notes || "", c.date]),
+    empty: "No vault cards yet — load a scanner Save file."
+  }
+};
+
+function renderTable(){
+  const t = TABLES[tab];
+  const q = $("q").value.trim().toLowerCase();
+  let rows = t.rows();
+  if(q) rows = rows.filter(r => r.map(c => typeof c === "object" ? "" : String(c)).join(" ").toLowerCase().includes(q));
+  if(rows.length === 0){ $("tbl").innerHTML = `<div class="empty">${q ? "Nothing matches that search." : t.empty}</div>`; return; }
+  $("tbl").innerHTML = `<table><thead><tr>${t.head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>` +
+    rows.map(r => `<tr>${r.map(c => `<td>${typeof c === "object" ? c.html : c}</td>`).join("")}</tr>`).join("") +
+    `</tbody></table>`;
+}
+
+function renderAll(){ renderStats(); renderTable(); }
+
+document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  b.classList.add("active"); tab = b.dataset.t; $("q").value = ""; renderTable();
+}));
+$("q").addEventListener("input", renderTable);
+
+function exportCSV(){
+  const t = TABLES[tab];
+  const rows = t.rows();
+  if(rows.length === 0){ showToast("Nothing to export in this table"); return; }
+  const esc = s => `"${String(s).replace(/"/g, '""')}"`;
+  const strip = c => typeof c === "object" ? c.html.replace(/<[^>]*>/g, "") : c;
+  const csv = [t.head.map(esc).join(",")].concat(rows.map(r => r.map(c => esc(strip(c))).join(","))).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv"}));
+  a.download = "vault_" + tab + ".csv"; a.click(); URL.revokeObjectURL(a.href);
+}
+function exportMaster(){
+  const a = document.createElement("a");
+  const d = {log: db.log, spends: db.spends, traders: db.traders, holds: db.holds, mycards: db.mycards};
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(d)], {type: "application/json"}));
+  a.download = "vault_master_save.json"; a.click(); URL.revokeObjectURL(a.href);
+  showToast("Master save exported — restorable in any scanner");
+}
+
+let toastTimer;
+function showToast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+renderAll();
+</script>
+<script>
+if(location.protocol.indexOf("http") === 0 && "serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
+</body>
+</html>
