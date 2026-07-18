@@ -293,7 +293,7 @@ function openDetail(id){
   if(c.img){ df.style.display=''; df.src = c.img; } else { df.style.display='none'; }
   const bw = document.getElementById('dBackWrap');
   bw.innerHTML = c.back ? `<img src="${c.back}" alt="Card back">`
-    : `<div class="noback">Back photo<br>coming soon</div>`;
+    : `<div class="noback">No back picture<br>available</div>`;
   const isHeld = held.includes(c.id), full = held.length>=MAX && !isHeld;
   const hb = document.getElementById('dHold');
   hb.className = 'hold-btn ' + (isHeld?'held':''); hb.disabled = full;
