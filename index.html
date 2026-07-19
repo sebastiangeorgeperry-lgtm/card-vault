@@ -304,10 +304,8 @@ function openDetail(id){
   const lbl = document.getElementById('dStockLabel');
   if(lbl) lbl.style.display = c.stock ? '' : 'none';
   const bw = document.getElementById('dBackWrap');
-  let shots = '';
-  if(c.stock && c.img) shots += `<figure class="realshot"><img src="${c.img}" alt="Actual card \u2014 front"><figcaption>actual card \u2014 front</figcaption></figure>`;
-  if(c.back) shots += `<figure class="realshot"><img src="${c.back}" alt="Actual card \u2014 back"><figcaption>actual card \u2014 back${c.stock?' \u2014 this is the one you get':''}</figcaption></figure>`;
-  bw.innerHTML = shots || (front ? `<div class="noback">No back picture<br>available</div>`
+  bw.innerHTML = c.back ? `<figure class="realshot"><img src="${c.back}" alt="Card back"><figcaption>the back of this exact card</figcaption></figure>`
+    : (front ? `<div class="noback">No back picture<br>available</div>`
              : `<div class="noback">Photo<br>coming soon</div>`);
   const isHeld = held.includes(c.id), full = held.length>=MAX && !isHeld;
   const hb = document.getElementById('dHold');
